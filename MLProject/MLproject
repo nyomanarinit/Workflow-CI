@@ -5,8 +5,17 @@ conda_env: conda.yaml
 entry_points:
   main:
     parameters:
-      n_estimators: {type: int, default: 505}
-      max_depth: {type: int, default: 35}
-      dataset: {type: string, default: "churn_preprocessed.csv"}
+      n_estimators: {type: int, default: 500}
+      min_samples_split: {type: int, default: 5}
+      min_samples_leaf: {type: int, default: 4}
+      max_features: {type: float, default: 0.5}
+      max_depth: {type: int, default: 15}
+      bootstrap: {type: boolean, default: true}
     command: >
-      python modelling.py --n_estimators {n_estimators} --max_depth {max_depth} --dataset {dataset}
+      python modelling.py
+      --n_estimators {n_estimators}
+      --min_samples_split {min_samples_split}
+      --min_samples_leaf {min_samples_leaf}
+      --max_features {max_features}
+      --max_depth {max_depth}
+      --bootstrap {bootstrap}
