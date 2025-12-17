@@ -21,7 +21,7 @@ import dagshub
 # =============================
 # CONFIG
 # =============================
-DATA_PATH = "Membangun_Model/churn_preprocessed.csv"
+DATA_PATH = "churn_preprocessed.csv"
 EXPERIMENT_NAME = "Customer Churn Prediction"
 
 # =============================
