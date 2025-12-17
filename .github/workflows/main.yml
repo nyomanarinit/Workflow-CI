@@ -1,82 +1,87 @@
-name: CI MLflow
+name: CI/CD Pipeline - Arini Final
 
 on:
   push:
-    branches: 
-      - main
-  pull_request:
-    branches:
-      - main
+    branches: ["main"]
+  workflow_dispatch:
 
 jobs:
-  build:
+  train-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repository
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-      # Setup Python
-      - name: Set Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.12"
+    - name: Setup Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
 
-      # Cek env
-      - name: Check ENV
-        run: |
-          echo "CSV_URL = $CSV_URL"
+    - name: Install Dependencies
+      run: |
+        pip install --upgrade pip
+        pip install mlflow==3.7.0
+        pip install -r MLProject/requirements.txt
 
-      # Install MLflow
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install mlflow==2.19.0 dagshub==0.3.15
+    # ================================
+    # Run MLflow Project
+    # ================================
+    - name: Run MLflow Project
+      run: |
+        mlflow run MLProject \
+          --env-manager=local \
+          --experiment-name "Churn-CI-Training"
 
-      # Jalankan MLflow project
-      - name: Run MLflow
-        run: |
-          mlflow run . --env-manager=local
+    # ================================
+    # Upload MLflow Artifact (Skilled)
+    # ================================
+    - name: Upload MLruns Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: mlruns-artifacts
+        path: MLProject/mlruns/
 
-      # Ambil latest run_id
-      - name: Get latest run_id
-        run: |
-          RUN_ID=$(ls -td mlruns/0/*/ | head -n 1 | cut -d'/' -f3)
-          echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
-          echo "Latest RUN ID = $RUN_ID"
+    # ================================
+    # Get latest MLflow run_id
+    # ================================
+    - name: Get latest run_id
+      id: get-run-id
+      run: |
+        RUN_ID=$(ls -t MLProject/mlruns/0 | head -n 1)
+        echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+        echo "Latest Run ID: $RUN_ID"
 
-      # Install library Google Drive
-      - name: Install Google Drive libs
-        run: |
-          pip install --upgrade google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client
+    # ================================
+    # Login Docker Hub
+    # ================================
+    - name: DockerHub Login
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Upload ke Google Drive
-      - name: Upload to Google Drive
-        env:
-          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
-          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
-        run: |
-          python MLproject/upload_to_gdrive.py
+    # ================================
+    # Build Docker Image From MLflow Model
+    # ================================
+    - name: Build Docker Image
+      run: |
+        mlflow models build-docker \
+          --model-uri "MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts/model" \
+          --name "churn-ci-model" \
+          --enable-mlserver
 
-      # Build Docker model dari MLflow
-      - name: Build Docker MLflow Model
-        run: |
-          mlflow models build-docker --model-uri "runs:/$RUN_ID/model" --name cc
+    # ================================
+    # Tag Docker Image
+    # ================================
+    - name: Tag Docker Image
+      run: |
+        docker tag churn-ci-model:latest \
+          ${{ secrets.DOCKER_USERNAME }}/churn-ci:latest
 
-      # Login Docker Hub
-      - name: Login Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-      # Tag Docker image
-      - name: Tag Docker image
-        run: |
-          docker tag cc ${{ secrets.DOCKER_HUB_USERNAME }}/cc:latest
-
-      # Push Docker image
-      - name: Push Docker image
-        run: |
-          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/cc:latest
+    # ================================
+    # Push Docker Image to Docker Hub
+    # ================================
+    - name: Push Docker Image
+      run: |
+        docker push ${{ secrets.DOCKER_USERNAME }}/churn-ci:latest
