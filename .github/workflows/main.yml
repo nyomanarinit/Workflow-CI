@@ -10,14 +10,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # ================================
+    # 1. Checkout Repository
+    # ================================
     - name: Checkout Repository
       uses: actions/checkout@v4
 
+    # ================================
+    # 2. Setup Python
+    # ================================
     - name: Setup Python 3.10
       uses: actions/setup-python@v5
       with:
         python-version: "3.10"
 
+    # ================================
+    # 3. Install Dependencies
+    # ================================
     - name: Install Dependencies
       run: |
         pip install --upgrade pip
@@ -25,16 +34,17 @@ jobs:
         pip install -r MLProject/requirements.txt
 
     # ================================
-    # Run MLflow Project
+    # 4. Run MLflow Project
     # ================================
     - name: Run MLflow Project
       run: |
-        mlflow run MLProject \
+        cd MLProject
+        mlflow run . \
           --env-manager=local \
           --experiment-name "Churn-CI-Training"
 
     # ================================
-    # Upload MLflow Artifact (Skilled)
+    # 5. Upload MLruns Artifacts
     # ================================
     - name: Upload MLruns Artifacts
       uses: actions/upload-artifact@v4
@@ -43,17 +53,17 @@ jobs:
         path: MLProject/mlruns/
 
     # ================================
-    # Get latest MLflow run_id
+    # 6. Ambil RUN_ID dari run_id.txt
     # ================================
-    - name: Get latest run_id
+    - name: Get RUN_ID
       id: get-run-id
       run: |
-        RUN_ID=$(ls -t MLProject/mlruns/0 | head -n 1)
+        RUN_ID=$(cat MLProject/run_id.txt)
         echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
-        echo "Latest Run ID: $RUN_ID"
+        echo "Run ID Detected: $RUN_ID"
 
     # ================================
-    # Login Docker Hub
+    # 7. Login DockerHub
     # ================================
     - name: DockerHub Login
       uses: docker/login-action@v3
@@ -62,17 +72,21 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     # ================================
-    # Build Docker Image From MLflow Model
+    # 8. Build Docker Image (MLflow)
     # ================================
     - name: Build Docker Image
+      env:
+        MLFLOW_TRACKING_URI: file:./MLProject/mlruns
       run: |
+        echo "Building Docker Image for Run ID: ${{ env.RUN_ID }}"
+
         mlflow models build-docker \
-          --model-uri "MLProject/mlruns/0/${{ env.RUN_ID }}/artifacts/model" \
+          --model-uri "runs:/${{ env.RUN_ID }}/model" \
           --name "churn-ci-model" \
           --enable-mlserver
 
     # ================================
-    # Tag Docker Image
+    # 9. Tag Docker Image
     # ================================
     - name: Tag Docker Image
       run: |
@@ -80,7 +94,7 @@ jobs:
           ${{ secrets.DOCKER_USERNAME }}/churn-ci:latest
 
     # ================================
-    # Push Docker Image to Docker Hub
+    # 10. Push Docker Image ke Docker Hub
     # ================================
     - name: Push Docker Image
       run: |
