@@ -1,54 +1,38 @@
-name: Churn CI/CD Pipeline
+name: churn-ml-ci
 
 on:
   push:
-    branches: ["main"]
-  workflow_dispatch:
+    branches: [main]
 
 jobs:
-  train-and-docker:
+  train-and-build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.10"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-    - name: Install Dependencies
-      run: |
-        pip install --upgrade pip
-        pip install -r MLProject/requirements.txt
+      - name: Install MLflow
+        run: |
+          pip install mlflow
 
-    - name: Run MLflow Project (Retraining)
-      run: |
-        cd MLProject
-        mlflow run . --env-manager=local
+      - name: Run MLflow Project
+        run: |
+          cd MLProject
+          mlflow run .
 
-    - name: Upload MLflow Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: churn-mlruns
-        path: MLProject/mlruns/
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-    - name: Login Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_HUB_USERNAME }}
-        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-    - name: Build Docker Image with MLflow
-      run: |
-        cd MLProject
-        RUN_ID=$(ls mlruns/*/*/artifacts/model -d | head -n 1 | cut -d'/' -f3)
-        mlflow models build-docker \
-          --model-uri runs:/$RUN_ID/model \
-          --name churn-model
-
-    - name: Tag & Push Docker Image
-      run: |
-        docker tag churn-model ${{ secrets.DOCKER_HUB_USERNAME }}/churn-model:latest
-        docker push ${{ secrets.DOCKER_HUB_USERNAME }}/churn-model:latest
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/churn-model:latest MLProject
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/churn-model:latest
