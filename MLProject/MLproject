@@ -1,7 +1,5 @@
 name: churn-training
 
-conda_env: conda.yaml
-
 entry_points:
   main:
     parameters:
