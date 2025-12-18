@@ -9,11 +9,14 @@ import mlflow.sklearn
 DATA_PATH = "churn_preprocessed.csv"
 EXPERIMENT_NAME = "Customer Churn Prediction"
 
+mlflow.set_tracking_uri("file:./mlruns")
+
 def run_model(args):
+    print("🚀 Training dimulai...")
     mlflow.set_experiment(EXPERIMENT_NAME)
 
     with mlflow.start_run():
-        mlflow.sklearn.autolog()
+        mlflow.sklearn.autolog(disable=True)
 
         df = pd.read_csv(DATA_PATH)
         X = df.drop("Exited", axis=1)
@@ -41,9 +44,14 @@ def run_model(args):
         acc = model.score(X_test, y_test)
 
         mlflow.log_metric("accuracy", acc)
-        mlflow.sklearn.log_model(model, "model")
 
-        print(f"Akurasi: {acc}")
+        mlflow.sklearn.log_model(
+            model,
+            artifact_path="model",
+            registered_model_name="churn_model"
+        )
+
+        print(f"🎯 Akurasi: {acc}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
