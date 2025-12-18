@@ -1,43 +1,44 @@
-import os
+import pandas as pd
 import argparse
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.ensemble import RandomForestClassifier
 import mlflow
 import mlflow.sklearn
-import pandas as pd
 
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
+# =============================
+# CONFIG
+# =============================
+DATA_PATH = "churn_preprocessed.csv"
+EXPERIMENT_NAME = "Customer Churn Prediction"
+
+mlflow.set_tracking_uri("file:./mlruns")
+mlflow.set_experiment(EXPERIMENT_NAME)
 
 def run_model(args):
     print("🚀 Training dimulai...")
 
-    # Ambil run_id dari MLflow Project (PENTING)
-    run_id = os.environ.get("MLFLOW_RUN_ID")
-    print(f"📁 Run ID: {run_id}")
-
-    # Simpan run_id untuk GitHub Actions
-    with open("run_id.txt", "w") as f:
-        f.write(run_id)
-
-    # Load dataset
-    df = pd.read_csv("data/WA_Fn-UseC_-Telco-Customer-Churn.csv")
-    print("✅ Dataset berhasil dimuat")
-
-    X = df.drop("Churn", axis=1)
-    y = df["Churn"].apply(lambda x: 1 if x == "Yes" else 0)
+    # =============================
+    # LOAD DATA
+    # =============================
+    df = pd.read_csv(DATA_PATH)
+    X = df.drop("Exited", axis=1)
+    y = df["Exited"]
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X.select_dtypes(include="number"),
-        y,
-        test_size=0.2,
-        random_state=42
+        X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    scaler = StandardScaler()
+    # =============================
+    # SCALING
+    # =============================
+    scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
+    # =============================
+    # MODEL
+    # =============================
     model = RandomForestClassifier(
         n_estimators=args.n_estimators,
         min_samples_split=args.min_samples_split,
@@ -49,16 +50,25 @@ def run_model(args):
     )
 
     model.fit(X_train, y_train)
+    acc = model.score(X_test, y_test)
 
-    acc = accuracy_score(y_test, model.predict(X_test))
-    print(f"🎯 Akurasi: {acc}")
-
-    # LOG ke MLflow TANPA start_run()
+    # =============================
+    # LOGGING (INI KUNCI)
+    # =============================
     mlflow.log_params(vars(args))
     mlflow.log_metric("accuracy", acc)
-    mlflow.sklearn.log_model(model, "model")
 
-    print("✅ Model & metrics berhasil dilog")
+    mlflow.sklearn.log_model(
+        sk_model=model,
+        artifact_path="model"
+    )
+
+    run_id = mlflow.active_run().info.run_id
+    print("🎯 Accuracy:", acc)
+    print("📁 Run ID:", run_id)
+
+    with open("run_id.txt", "w") as f:
+        f.write(run_id)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -68,6 +78,6 @@ if __name__ == "__main__":
     parser.add_argument("--max_features", type=float, default=0.5)
     parser.add_argument("--max_depth", type=int, default=15)
     parser.add_argument("--bootstrap", type=bool, default=True)
-
     args = parser.parse_args()
+
     run_model(args)
