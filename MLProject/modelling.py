@@ -5,16 +5,16 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import RandomForestClassifier
 import mlflow
 import mlflow.sklearn
-import os
 
 DATA_PATH = "churn_preprocessed.csv"
 EXPERIMENT_NAME = "Customer Churn Prediction"
 
-# WAJIB untuk GitHub Actions
+# WAJIB untuk CI
 mlflow.set_tracking_uri("file:./mlruns")
 
 def run_model(args):
     print("🚀 Training dimulai...")
+
     mlflow.set_experiment(EXPERIMENT_NAME)
     mlflow.sklearn.autolog()
 
@@ -43,7 +43,6 @@ def run_model(args):
     model.fit(X_train, y_train)
     acc = model.score(X_test, y_test)
 
-    mlflow.log_metric("accuracy", acc)
     print(f"🎯 Akurasi: {acc}")
 
 if __name__ == "__main__":
