@@ -9,6 +9,13 @@ entry_points:
       min_samples_leaf: {type: int, default: 4}
       max_features: {type: float, default: 0.5}
       max_depth: {type: int, default: 15}
-      bootstrap: {type: boolean, default: true}
+      bootstrap: {type: string, default: "true"}
 
-    command: "python modelling.py --n_estimators {n_estimators} --min_samples_split {min_samples_split} --min_samples_leaf {min_samples_leaf} --max_features {max_features} --max_depth {max_depth} --bootstrap {bootstrap}"
+    command: >
+      python modelling.py
+      --n_estimators {n_estimators}
+      --min_samples_split {min_samples_split}
+      --min_samples_leaf {min_samples_leaf}
+      --max_features {max_features}
+      --max_depth {max_depth}
+      --bootstrap {bootstrap}
