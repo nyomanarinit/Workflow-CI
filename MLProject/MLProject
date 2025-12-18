@@ -1,4 +1,4 @@
-name: churn-mlflow-project
+name: churn-retraining
 
 conda_env: conda.yaml
 
