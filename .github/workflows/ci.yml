@@ -1,11 +1,12 @@
-name: CI-MLflow-Churn
+name: MLflow CI Training & Docker
 
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
-  train-and-build:
+  train-and-docker:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,7 +20,7 @@ jobs:
 
     - name: Install MLflow
       run: |
-        pip install mlflow scikit-learn pandas
+        pip install mlflow==3.7.0
 
     - name: Run MLflow Project
       run: |
@@ -27,18 +28,17 @@ jobs:
         mlflow run .
 
     - name: Login Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_HUB_USERNAME }}
-        password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      run: |
+        echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login \
+          -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
 
     - name: Build Docker Image with MLflow
       run: |
         cd MLProject
-        mlflow models build-docker \
-          -m mlruns \
-          -n arinitrirahayuu/churn-ci:latest
+        mlflow build-docker \
+          --name arinitrirahayuu/churn-ci \
+          .
 
     - name: Push Docker Image
       run: |
-        docker push arinitrirahayuu/churn-ci:latest
+        docker push arinitrirahayuu/churn-ci
