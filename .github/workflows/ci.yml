@@ -1,16 +1,15 @@
-name: MLflow CI Training & Docker
+name: MLflow CI Training
 
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch:
 
 jobs:
-  train-and-docker:
+  train:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
+    - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Set up Python
@@ -18,26 +17,23 @@ jobs:
       with:
         python-version: "3.10"
 
-    - name: Install MLflow
+    - name: Install dependencies
       run: |
-        pip install mlflow==3.7.0
+        pip install -r MLProject/requirements.txt
 
     - name: Run MLflow Project
       run: |
         cd MLProject
         mlflow run .
 
-    - name: Login Docker Hub
-      run: |
-        echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login \
-          -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
-
-    - name: Build Docker Image with MLflow
+    - name: Build Docker Image (Advanced)
       run: |
         cd MLProject
-        mlflow build-docker \
-          --name arinitrirahayuu/churn-ci \
-          .
+        mlflow models build-docker -m mlruns -n arinitrirahayuu/churn-ci
+
+    - name: Login Docker Hub
+      run: |
+        echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
 
     - name: Push Docker Image
       run: |
