@@ -1,4 +1,6 @@
-name: churn-mlflow-project
+name: churn-ci
+
+conda_env: conda.yaml
 
 entry_points:
   main:
@@ -17,5 +19,3 @@ entry_points:
       --max_features {max_features}
       --max_depth {max_depth}
       --bootstrap {bootstrap}
-
-env_manager: local
