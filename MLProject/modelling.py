@@ -9,22 +9,26 @@ import mlflow.sklearn
 DATA_PATH = "churn_preprocessed.csv"
 EXPERIMENT_NAME = "Customer Churn Prediction"
 
-mlflow.set_tracking_uri("file:./mlruns")
-
 def run_model(args):
     print("🚀 Training dimulai...")
 
+    # tracking lokal (AMAN CI)
+    mlflow.set_tracking_uri("file:./mlruns")
     mlflow.set_experiment(EXPERIMENT_NAME)
 
-    with mlflow.start_run():
-        mlflow.sklearn.autolog()
+    with mlflow.start_run(run_name="RandomForest-Churn"):
+        mlflow.sklearn.autolog(log_models=True)
 
         df = pd.read_csv(DATA_PATH)
+
         X = df.drop("Exited", axis=1)
         y = df["Exited"]
 
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42, stratify=y
+            X, y,
+            test_size=0.2,
+            random_state=42,
+            stratify=y
         )
 
         scaler = MinMaxScaler()
@@ -38,23 +42,25 @@ def run_model(args):
             max_features=args.max_features,
             max_depth=args.max_depth,
             bootstrap=args.bootstrap,
-            random_state=42
+            random_state=42,
+            n_jobs=-1
         )
 
         model.fit(X_train, y_train)
         acc = model.score(X_test, y_test)
 
         mlflow.log_metric("accuracy", acc)
-        print(f"🎯 Akurasi: {acc}")
+        print(f"🎯 Akurasi: {acc:.4f}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+
     parser.add_argument("--n_estimators", type=int, default=500)
     parser.add_argument("--min_samples_split", type=int, default=5)
     parser.add_argument("--min_samples_leaf", type=int, default=4)
     parser.add_argument("--max_features", type=float, default=0.5)
     parser.add_argument("--max_depth", type=int, default=15)
-    parser.add_argument("--bootstrap", type=bool, default=True)
+    parser.add_argument("--bootstrap", action="store_true")
 
     args = parser.parse_args()
     run_model(args)
