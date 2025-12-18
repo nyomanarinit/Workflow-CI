@@ -6,21 +6,17 @@ from sklearn.ensemble import RandomForestClassifier
 import mlflow
 import mlflow.sklearn
 
-# =============================
-# CONFIG
-# =============================
 DATA_PATH = "churn_preprocessed.csv"
 EXPERIMENT_NAME = "Customer Churn Prediction"
 
-mlflow.set_tracking_uri("file:./mlruns")
-
 def run_model(args):
     mlflow.set_experiment(EXPERIMENT_NAME)
-    mlflow.sklearn.autolog()
+    mlflow.sklearn.autolog(log_input_examples=True)
 
     print("🚀 Training dimulai...")
 
     df = pd.read_csv(DATA_PATH)
+
     X = df.drop("Exited", axis=1)
     y = df["Exited"]
 
@@ -32,34 +28,38 @@ def run_model(args):
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    with mlflow.start_run() as run:
-        model = RandomForestClassifier(
-            n_estimators=args.n_estimators,
-            min_samples_split=args.min_samples_split,
-            min_samples_leaf=args.min_samples_leaf,
-            max_features=args.max_features,
-            max_depth=args.max_depth,
-            bootstrap=args.bootstrap,
-            random_state=42
-        )
+    print("🤖 Melatih model...")
 
-        model.fit(X_train, y_train)
-        acc = model.score(X_test, y_test)
+    model = RandomForestClassifier(
+        n_estimators=args.n_estimators,
+        min_samples_split=args.min_samples_split,
+        min_samples_leaf=args.min_samples_leaf,
+        max_features=args.max_features,
+        max_depth=args.max_depth,
+        bootstrap=args.bootstrap,
+        random_state=42
+    )
 
-        print(f"🎯 Accuracy: {acc}")
-        print(f"📁 Run ID: {run.info.run_id}")
+    model.fit(X_train, y_train)
+    acc = model.score(X_test, y_test)
 
+    print(f"🎯 Akurasi: {acc}")
+
+    # Ambil active run dari MLflow Project
+    run = mlflow.active_run()
+    if run:
         with open("run_id.txt", "w") as f:
             f.write(run.info.run_id)
+        print("💾 run_id.txt disimpan")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n_estimators", type=int, default=500)
-    parser.add_argument("--min_samples_split", type=int, default=5)
-    parser.add_argument("--min_samples_leaf", type=int, default=4)
-    parser.add_argument("--max_features", type=float, default=0.5)
-    parser.add_argument("--max_depth", type=int, default=15)
+    parser.add_argument("--n_estimators", type=int, default=200)
+    parser.add_argument("--min_samples_split", type=int, default=2)
+    parser.add_argument("--min_samples_leaf", type=int, default=1)
+    parser.add_argument("--max_features", type=float, default=0.8)
+    parser.add_argument("--max_depth", type=int, default=10)
     parser.add_argument("--bootstrap", type=bool, default=True)
-
     args = parser.parse_args()
+
     run_model(args)
