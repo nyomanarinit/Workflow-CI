@@ -89,11 +89,11 @@ jobs:
     # =========================
     - name: Tag Docker Image
       run: |
-        docker tag churn-model ${{ secrets.DOCKER_HUB_USERNAME }}/churn-model:latest
+        docker tag churn-model ${{ secrets.DOCKER_HUB_USERNAME }}/churnci:latest
 
     # =========================
     # 10. Push Docker Image ke Docker Hub
     # =========================
     - name: Push Docker Image
       run: |
-        docker push ${{ secrets.DOCKER_HUB_USERNAME }}/churn-model:latest
+        docker push ${{ secrets.DOCKER_HUB_USERNAME }}/churnci:latest
