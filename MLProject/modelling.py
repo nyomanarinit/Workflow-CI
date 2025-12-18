@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 import mlflow
 import mlflow.sklearn
 
-DATA_PATH = "churn_preprocessing.csv"
+DATA_PATH = "churn_preprocessed.csv"
 EXPERIMENT_NAME = "Customer Churn Prediction"
 
 def main(args):
