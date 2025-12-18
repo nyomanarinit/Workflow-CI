@@ -1,6 +1,4 @@
-name: churn-mlflow-project
-
-conda_env: conda.yaml
+name: churn-training
 
 entry_points:
   main:
@@ -10,7 +8,7 @@ entry_points:
       min_samples_leaf: {type: int, default: 4}
       max_features: {type: float, default: 0.5}
       max_depth: {type: int, default: 15}
-      bootstrap: {type: boolean, default: true}
+      bootstrap: {type: bool, default: true}
     command: >
       python modelling.py
       --n_estimators {n_estimators}
