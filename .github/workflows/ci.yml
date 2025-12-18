@@ -2,37 +2,43 @@ name: MLflow CI Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
-  train-and-docker:
+  train-and-build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Setup Python
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: "3.10"
 
-    - name: Install dependencies
+    - name: Install MLflow
       run: |
-        pip install --upgrade pip
-        pip install -r MLProject/requirements.txt
+        pip install mlflow==3.7.0
 
-    - name: Run MLflow Project
+    - name: Train Model
+      working-directory: MLProject
       run: |
-        cd MLProject
-        mlflow run . --env-manager=local
+        python modelling.py
 
     - name: Build Docker Image with MLflow
-      env:
-        DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
-        DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      working-directory: MLProject
       run: |
-        cd MLProject
-        mlflow models build-docker -m runs:/$(mlflow runs list -v 1 --experiment-name "Customer Churn Prediction" | awk 'NR==2{print $1}') -n arinitrirahayuu/churn-ci
-        echo "$DOCKER_HUB_ACCESS_TOKEN" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+        mlflow models build-docker \
+          --model-uri runs:/$(ls mlruns/*/*/meta.yaml | head -n 1 | cut -d'/' -f2) \
+          --name arinitrirahayuu/churn-ci
+
+    - name: Login to Docker Hub
+      run: |
+        echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login \
+          -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+
+    - name: Push Docker Image
+      run: |
         docker push arinitrirahayuu/churn-ci
