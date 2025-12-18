@@ -9,18 +9,16 @@ import mlflow.sklearn
 DATA_PATH = "churn_preprocessed.csv"
 EXPERIMENT_NAME = "Customer Churn Prediction"
 
-# tracking lokal (AMAN di GitHub Actions)
 mlflow.set_tracking_uri("file:./mlruns")
+mlflow.set_experiment(EXPERIMENT_NAME)
+
+# PENTING: autolog di luar run
+mlflow.sklearn.autolog()
 
 def run_model(args):
     print("🚀 Training dimulai...")
-    mlflow.set_experiment(EXPERIMENT_NAME)
-
-    # ❗ TIDAK pakai start_run
-    mlflow.sklearn.autolog()
 
     df = pd.read_csv(DATA_PATH)
-
     X = df.drop("Exited", axis=1)
     y = df["Exited"]
 
@@ -45,6 +43,7 @@ def run_model(args):
     model.fit(X_train, y_train)
     acc = model.score(X_test, y_test)
 
+    mlflow.log_metric("accuracy", acc)
     print(f"🎯 Akurasi: {acc}")
 
 if __name__ == "__main__":
