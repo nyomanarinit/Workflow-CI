@@ -1,0 +1,48 @@
+name: CI/CD Pipeline Final
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  train-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12.7"
+
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r MLProject/requirements.txt
+
+    - name: Run MLflow Project
+      run: |
+        cd MLProject
+        mlflow run . --env-manager=local
+
+    - name: Get Run ID
+      run: |
+        echo "RUN_ID=$(cat MLProject/run_id.txt)" >> $GITHUB_ENV
+
+    - name: Login Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build Docker Image
+      run: |
+        mlflow models build-docker \
+          --model-uri "runs:/${{ env.RUN_ID }}/model" \
+          --name churn-ci-model
+
+    - name: Push Image
+      run: |
+        docker tag churn-ci-model ${{ secrets.DOCKER_USERNAME }}/churn-ci:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/churn-ci:latest
