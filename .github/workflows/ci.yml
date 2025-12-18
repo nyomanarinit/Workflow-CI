@@ -2,43 +2,34 @@ name: MLflow CI Pipeline
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [ "main" ]
 
 jobs:
-  train-and-dockerize:
+  train-and-docker:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout Repo
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Set up Conda
+      uses: conda-incubator/setup-miniconda@v3
       with:
-        python-version: '3.10'
+        activate-environment: mlflow-env
+        environment-file: MLProject/conda.yaml
+        auto-activate-base: false
 
-    - name: Install MLflow
-      run: |
-        pip install mlflow==3.7.0
-
-    - name: Run MLflow Project (Training)
+    - name: Run MLflow Project
+      shell: bash -l {0}
       run: |
         cd MLProject
-        mlflow run . --env-manager=local
-
-    - name: Login to Docker Hub
-      run: |
-        echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+        mlflow run .
 
     - name: Build Docker Image with MLflow
+      shell: bash -l {0}
       run: |
         cd MLProject
-        RUN_ID=$(ls mlruns/*/*/meta.yaml | head -n 1 | awk -F'/' '{print $(NF-1)}')
+        RUN_ID=$(ls mlruns/*/*/ | head -n 1 | awk -F'/' '{print $(NF-1)}')
         mlflow models build-docker \
           -m runs:/$RUN_ID/model \
-          -n arinitrirahayuu/churn-ci
-
-    - name: Push Docker Image
-      run: |
-        docker push arinitrirahayuu/churn-ci
+          -n churn-mlflow-image
