@@ -3,6 +3,7 @@ name: CI/CD Pipeline Final
 on:
   push:
     branches: ["main"]
+  workflow_dispatch:
 
 jobs:
   train-and-deploy:
@@ -11,15 +12,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
+    - uses: actions/setup-python@v5
       with:
-        python-version: "3.12"
+        python-version: "3.12.7"
 
-    - name: Install Dependencies
+    - name: Install dependencies
       run: |
         pip install --upgrade pip
         pip install -r MLProject/requirements.txt
+        pip install mlflow==3.7.0
 
     - name: Run MLflow Project
       run: |
@@ -40,9 +41,14 @@ jobs:
       run: |
         mlflow models build-docker \
           --model-uri "runs:/${{ env.RUN_ID }}/model" \
-          --name churn-ci-model
+          --name churn-ci-model \
+          --enable-mlserver
 
-    - name: Tag & Push Image
+    - name: Tag Docker Image
       run: |
-        docker tag churn-ci-model ${{ secrets.DOCKER_USERNAME }}/churn-ci:latest
-        docker push ${{ secrets.DOCKER_USERNAME }}/churn-ci:latest
+        docker tag churn-ci-model \
+          arinitrirahayuu/churn-ci:latest
+
+    - name: Push Docker Image
+      run: |
+        docker push arinitrirahayuu/churn-ci:latest
