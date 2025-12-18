@@ -1,4 +1,4 @@
-name: CI/CD Pipeline - Arini Final
+name: CI/CD Pipeline Final
 
 on:
   push:
@@ -10,92 +10,53 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # ================================
-    # 1. Checkout Repository
-    # ================================
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    # ================================
-    # 2. Setup Python
-    # ================================
-    - name: Setup Python 3.10
+    - name: Setup Python
       uses: actions/setup-python@v5
       with:
-        python-version: "3.10"
+        python-version: "3.12.7"
 
-    # ================================
-    # 3. Install Dependencies
-    # ================================
     - name: Install Dependencies
       run: |
         pip install --upgrade pip
-        pip install mlflow==3.7.0
         pip install -r MLProject/requirements.txt
+        pip install mlflow==3.7.0
 
-    # ================================
-    # 4. Run MLflow Project
-    # ================================
     - name: Run MLflow Project
       run: |
         cd MLProject
-        mlflow run . \
-          --env-manager=local \
-          --experiment-name "Churn-CI-Training"
+        mlflow run . --env-manager=local --experiment-name "Churn-CI-Training"
 
-    # ================================
-    # 5. Upload MLruns Artifacts
-    # ================================
-    - name: Upload MLruns Artifacts
+    - name: Upload MLflow Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: mlruns-artifacts
         path: MLProject/mlruns/
 
-    # ================================
-    # 6. Ambil RUN_ID dari run_id.txt
-    # ================================
-    - name: Get RUN_ID
-      id: get-run-id
+    - name: Get Run ID
       run: |
         RUN_ID=$(cat MLProject/run_id.txt)
         echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
-        echo "Run ID Detected: $RUN_ID"
 
-    # ================================
-    # 7. Login DockerHub
-    # ================================
-    - name: DockerHub Login
+    - name: Login Docker Hub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    # ================================
-    # 8. Build Docker Image (MLflow)
-    # ================================
-    - name: Build Docker Image
-      env:
-        MLFLOW_TRACKING_URI: file:./MLProject/mlruns
+    - name: Build Docker Image from MLflow Model
       run: |
-        echo "Building Docker Image for Run ID: ${{ env.RUN_ID }}"
-
         mlflow models build-docker \
           --model-uri "runs:/${{ env.RUN_ID }}/model" \
-          --name "churn-ci-model" \
+          --name churn-ci-model \
           --enable-mlserver
 
-    # ================================
-    # 9. Tag Docker Image
-    # ================================
     - name: Tag Docker Image
       run: |
-        docker tag churn-ci-model:latest \
-          ${{ secrets.DOCKER_USERNAME }}/churn-ci:latest
+        docker tag churn-ci-model ${{ secrets.DOCKER_USERNAME }}/churn-ci:latest
 
-    # ================================
-    # 10. Push Docker Image ke Docker Hub
-    # ================================
     - name: Push Docker Image
       run: |
         docker push ${{ secrets.DOCKER_USERNAME }}/churn-ci:latest
