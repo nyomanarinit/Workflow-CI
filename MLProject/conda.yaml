@@ -1,20 +1,13 @@
 name: mlflow-env
-
 channels:
   - conda-forge
-
 dependencies:
-  - python=3.12.7
-  - pip<=24.2
-
+  - python=3.10
+  - pip
   - pip:
-      - dagshub==0.6.3
-      - mlflow==3.7.0        # kamu pakai MLflow 3.x → benar!
-      - cloudpickle==3.1.0
-      - numpy==2.3.5
-      - pandas==2.3.3
-      - psutil==5.9.0
-      - scikit-learn==1.7.2
-      - scipy==1.14.1
-      - matplotlib==3.10.7
-      - seaborn==0.13.2
+      - mlflow==3.7.0
+      - pandas
+      - numpy
+      - scikit-learn
+      - scipy
+      - cloudpickle
