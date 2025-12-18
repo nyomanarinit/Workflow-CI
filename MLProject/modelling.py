@@ -5,20 +5,16 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import RandomForestClassifier
 import mlflow
 import mlflow.sklearn
-import os
 
 DATA_PATH = "churn_preprocessed.csv"
 EXPERIMENT_NAME = "Customer Churn Prediction"
 
 def run_model(args):
-    print("🚀 Training dimulai...")
-
     mlflow.set_experiment(EXPERIMENT_NAME)
 
     with mlflow.start_run():
-        mlflow.sklearn.autolog(log_models=False)
-
         df = pd.read_csv(DATA_PATH)
+
         X = df.drop("Exited", axis=1)
         y = df["Exited"]
 
@@ -41,18 +37,17 @@ def run_model(args):
         )
 
         model.fit(X_train, y_train)
-        acc = model.score(X_test, y_test)
+        accuracy = model.score(X_test, y_test)
 
-        mlflow.log_metric("accuracy", acc)
+        mlflow.log_metric("accuracy", accuracy)
 
-        # 🔑 WAJIB UNTUK BUILD DOCKER
         mlflow.sklearn.log_model(
             sk_model=model,
             artifact_path="model",
             registered_model_name="churn_model"
         )
 
-        print(f"🎯 Akurasi: {acc}")
+        print(f"Akurasi model: {accuracy}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
