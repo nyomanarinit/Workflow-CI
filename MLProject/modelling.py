@@ -13,11 +13,13 @@ mlflow.set_tracking_uri("file:./mlruns")
 
 def run_model(args):
     print("🚀 Training dimulai...")
+
     mlflow.set_experiment(EXPERIMENT_NAME)
 
     with mlflow.start_run():
-        df = pd.read_csv(DATA_PATH)
+        mlflow.sklearn.autolog()
 
+        df = pd.read_csv(DATA_PATH)
         X = df.drop("Exited", axis=1)
         y = df["Exited"]
 
@@ -42,10 +44,7 @@ def run_model(args):
         model.fit(X_train, y_train)
         acc = model.score(X_test, y_test)
 
-        mlflow.log_param("n_estimators", args.n_estimators)
         mlflow.log_metric("accuracy", acc)
-        mlflow.sklearn.log_model(model, "model")
-
         print(f"🎯 Akurasi: {acc}")
 
 if __name__ == "__main__":
