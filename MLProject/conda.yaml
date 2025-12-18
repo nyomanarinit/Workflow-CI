@@ -1,15 +1,17 @@
+name: churn-mlflow-env
+
 channels:
-- conda-forge
+  - conda-forge
+
 dependencies:
-- python=3.12.7
-- pip<=25.3
-- pip:
-  - mlflow==2.19.0
-  - cloudpickle==3.1.2
-  - numpy==2.3.5
-  - pandas==2.3.3
-  - psutil==7.1.3
-  - pyarrow==18.1.0
-  - scikit-learn==1.7.2
-  - scipy==1.16.3
-name: mlflow-env
+  - python=3.10
+  - pip
+  - pip:
+      - mlflow==2.19.0
+      - cloudpickle==3.1.2
+      - numpy==1.26.4
+      - pandas==2.2.3
+      - scikit-learn==1.5.2
+      - scipy==1.11.4
+      - pyarrow==14.0.2
+      - psutil==5.9.8
