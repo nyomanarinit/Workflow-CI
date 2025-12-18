@@ -1,0 +1,11 @@
+name: churn-training
+
+python_env:
+  python: "3.10"
+  dependencies:
+    - -r requirements.txt
+
+entry_points:
+  main:
+    command: >
+      python modelling.py
