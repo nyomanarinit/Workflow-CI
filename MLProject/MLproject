@@ -1,4 +1,4 @@
-name: churn-ci
+name: churn-mlflow-project
 
 conda_env: conda.yaml
 
