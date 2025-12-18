@@ -5,6 +5,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.ensemble import RandomForestClassifier
 import mlflow
 import mlflow.sklearn
+import os
 
 # =============================
 # CONFIG
@@ -12,16 +13,24 @@ import mlflow.sklearn
 DATA_PATH = "churn_preprocessed.csv"
 EXPERIMENT_NAME = "Customer Churn Prediction"
 
+# Tracking lokal (WAJIB untuk GitHub Actions)
 mlflow.set_tracking_uri("file:./mlruns")
-mlflow.set_experiment(EXPERIMENT_NAME)
 
 def run_model(args):
     print("🚀 Training dimulai...")
 
+    mlflow.set_experiment(EXPERIMENT_NAME)
+    mlflow.sklearn.autolog(log_input_examples=True)
+
     # =============================
     # LOAD DATA
     # =============================
+    if not os.path.exists(DATA_PATH):
+        raise FileNotFoundError(f"Dataset tidak ditemukan: {DATA_PATH}")
+
     df = pd.read_csv(DATA_PATH)
+    print("✅ Dataset berhasil dimuat")
+
     X = df.drop("Exited", axis=1)
     y = df["Exited"]
 
@@ -29,15 +38,12 @@ def run_model(args):
         X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    # =============================
-    # SCALING
-    # =============================
     scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
     # =============================
-    # MODEL
+    # TRAIN MODEL
     # =============================
     model = RandomForestClassifier(
         n_estimators=args.n_estimators,
@@ -51,24 +57,21 @@ def run_model(args):
 
     model.fit(X_train, y_train)
     acc = model.score(X_test, y_test)
+    print(f"🎯 Akurasi: {acc}")
 
     # =============================
-    # LOGGING (INI KUNCI)
+    # AMBIL RUN AKTIF (INI KUNCI!)
     # =============================
-    mlflow.log_params(vars(args))
-    mlflow.log_metric("accuracy", acc)
+    run = mlflow.active_run()
+    run_id = run.info.run_id
 
-    mlflow.sklearn.log_model(
-        sk_model=model,
-        artifact_path="model"
-    )
+    print(f"📁 Run ID: {run_id}")
 
-    run_id = mlflow.active_run().info.run_id
-    print("🎯 Accuracy:", acc)
-    print("📁 Run ID:", run_id)
-
+    # Simpan run_id untuk GitHub Actions
     with open("run_id.txt", "w") as f:
         f.write(run_id)
+
+    print("💾 run_id.txt berhasil dibuat")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
