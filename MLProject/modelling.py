@@ -7,22 +7,24 @@ import mlflow
 import mlflow.sklearn
 import os
 
+# =============================
+# CONFIG
+# =============================
 DATA_PATH = "churn_preprocessed.csv"
-EXPERIMENT_NAME = "Customer Churn Prediction"
-
-# Tracking lokal untuk GitHub Actions
-mlflow.set_tracking_uri("file:./mlruns")
 
 def run_model(args):
     print("🚀 Training dimulai...")
-    mlflow.set_experiment(EXPERIMENT_NAME)
+
+    # Autolog saja, jangan set experiment
     mlflow.sklearn.autolog(log_input_examples=True)
 
+    # =============================
+    # LOAD DATA
+    # =============================
     if not os.path.exists(DATA_PATH):
         raise FileNotFoundError(f"Dataset tidak ditemukan: {DATA_PATH}")
 
     df = pd.read_csv(DATA_PATH)
-
     X = df.drop("Exited", axis=1)
     y = df["Exited"]
 
@@ -34,6 +36,9 @@ def run_model(args):
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
+    # =============================
+    # TRAIN MODEL
+    # =============================
     model = RandomForestClassifier(
         n_estimators=args.n_estimators,
         min_samples_split=args.min_samples_split,
@@ -46,16 +51,7 @@ def run_model(args):
 
     model.fit(X_train, y_train)
     acc = model.score(X_test, y_test)
-
     print(f"🎯 Akurasi: {acc}")
-
-    run = mlflow.active_run()
-    run_id = run.info.run_id
-
-    with open("run_id.txt", "w") as f:
-        f.write(run_id)
-
-    print(f"📁 Run ID: {run_id}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
