@@ -7,51 +7,45 @@ import mlflow
 import mlflow.sklearn
 import os
 
-# =============================
-# CONFIG
-# =============================
 DATA_PATH = "churn_preprocessed.csv"
+EXPERIMENT_NAME = "Customer Churn Prediction"
+
+mlflow.set_tracking_uri("file:./mlruns")
 
 def run_model(args):
     print("🚀 Training dimulai...")
+    mlflow.set_experiment(EXPERIMENT_NAME)
 
-    # Autolog saja, jangan set experiment
-    mlflow.sklearn.autolog(log_input_examples=True)
+    with mlflow.start_run():
+        mlflow.sklearn.autolog()
 
-    # =============================
-    # LOAD DATA
-    # =============================
-    if not os.path.exists(DATA_PATH):
-        raise FileNotFoundError(f"Dataset tidak ditemukan: {DATA_PATH}")
+        df = pd.read_csv(DATA_PATH)
+        X = df.drop("Exited", axis=1)
+        y = df["Exited"]
 
-    df = pd.read_csv(DATA_PATH)
-    X = df.drop("Exited", axis=1)
-    y = df["Exited"]
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42, stratify=y
+        )
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+        scaler = MinMaxScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
 
-    scaler = MinMaxScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+        model = RandomForestClassifier(
+            n_estimators=args.n_estimators,
+            min_samples_split=args.min_samples_split,
+            min_samples_leaf=args.min_samples_leaf,
+            max_features=args.max_features,
+            max_depth=args.max_depth,
+            bootstrap=args.bootstrap,
+            random_state=42
+        )
 
-    # =============================
-    # TRAIN MODEL
-    # =============================
-    model = RandomForestClassifier(
-        n_estimators=args.n_estimators,
-        min_samples_split=args.min_samples_split,
-        min_samples_leaf=args.min_samples_leaf,
-        max_features=args.max_features,
-        max_depth=args.max_depth,
-        bootstrap=args.bootstrap,
-        random_state=42
-    )
+        model.fit(X_train, y_train)
+        acc = model.score(X_test, y_test)
 
-    model.fit(X_train, y_train)
-    acc = model.score(X_test, y_test)
-    print(f"🎯 Akurasi: {acc}")
+        mlflow.log_metric("accuracy", acc)
+        print(f"🎯 Akurasi: {acc}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -61,6 +55,6 @@ if __name__ == "__main__":
     parser.add_argument("--max_features", type=float, default=0.5)
     parser.add_argument("--max_depth", type=int, default=15)
     parser.add_argument("--bootstrap", type=bool, default=True)
-
     args = parser.parse_args()
+
     run_model(args)
