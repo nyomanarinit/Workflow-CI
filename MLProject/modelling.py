@@ -10,19 +10,39 @@ import mlflow.sklearn
 DATA_PATH = "churn_preprocessed.csv"
 EXPERIMENT_NAME = "Customer Churn Prediction"
 
+# =========================
+# PILIH FITUR PENTING
+# =========================
+FEATURE_COLUMNS = [
+    "CreditScore",
+    "Age",
+    "Tenure",
+    "Balance",
+    "IsActiveMember",
+    "EstimatedSalary"
+]
+
 def main(args):
     print("🚀 Training dimulai...")
-
     mlflow.set_experiment(EXPERIMENT_NAME)
-    mlflow.sklearn.autolog()  # WAJIB sesuai requirement
+
+    # WAJIB: autolog sesuai ketentuan
+    mlflow.sklearn.autolog()
 
     # Load data
     df = pd.read_csv(DATA_PATH)
-    X = df.drop("Exited", axis=1)
+
+    # =========================
+    # FEATURE SELECTION
+    # =========================
+    X = df[FEATURE_COLUMNS]
     y = df["Exited"]
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, stratify=y, random_state=42
+        X, y,
+        test_size=0.2,
+        stratify=y,
+        random_state=42
     )
 
     # Scaling
@@ -42,31 +62,31 @@ def main(args):
         )
 
         model.fit(X_train_scaled, y_train)
-
         acc = model.score(X_test_scaled, y_test)
+
         mlflow.log_metric("accuracy", acc)
 
         # =========================
-        # SIMPAN MODEL & SCALER
+        # SIMPAN ARTEFAK LOKAL
         # =========================
         joblib.dump(model, "model.pkl")
         joblib.dump(scaler, "scaler.pkl")
 
-        # log ke MLflow juga (artefak)
+        # log artefak ke MLflow (AMAN untuk CI)
         mlflow.log_artifact("model.pkl")
         mlflow.log_artifact("scaler.pkl")
 
-        # WAJIB untuk CI / Docker
+        # WAJIB untuk mlflow build-docker
         mlflow.sklearn.log_model(model, artifact_path="model")
 
-        # Simpan run_id
+        # simpan run_id
         run_id = run.info.run_id
         with open("run_id.txt", "w") as f:
             f.write(run_id)
 
         print(f"✅ Training selesai | Accuracy: {acc}")
         print(f"🆔 Run ID: {run_id}")
-        print("📦 model.pkl & scaler.pkl berhasil disimpan")
+        print("📦 model.pkl & scaler.pkl tersimpan")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
